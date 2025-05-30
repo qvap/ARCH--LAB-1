@@ -1,0 +1,23 @@
+# Makefile для GUI версии с wxWidgets
+CXX = C:/msys64/ucrt64/bin/g++.exe
+CXXFLAGS = -std=c++17 -Wall -Wextra -O2
+WXCXXFLAGS = -IC:/msys64/ucrt64/lib/wx/include/msw-unicode-3.2 -IC:/msys64/ucrt64/include/wx-3.2 -D_FILE_OFFSET_BITS=64 -DWXUSINGDLL -D__WXMSW__
+WXLIBS = -LC:/msys64/ucrt64/lib -pipe -Wl,--subsystem,windows -mwindows -lwx_mswu_core-3.2 -lwx_baseu-3.2
+SYSLIBS = -lwsock32 -liphlpapi
+
+TARGET = gui_app.exe
+SOURCE = gui_main.cpp
+
+# Основная цель
+$(TARGET): $(SOURCE)
+	$(CXX) $(CXXFLAGS) $(WXCXXFLAGS) $(SOURCE) -o $(TARGET) $(WXLIBS) $(SYSLIBS)
+
+# Очистка
+clean:
+	rm -f $(TARGET)
+
+# Запуск
+run: $(TARGET)
+	./$(TARGET)
+
+.PHONY: clean run
