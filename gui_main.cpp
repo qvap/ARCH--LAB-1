@@ -80,17 +80,32 @@ string getMacAddress() {
     if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) == NO_ERROR) {
         pAdapter = pAdapterInfo;
         while (pAdapter) {
-            if (pAdapter->Type == MIB_IF_TYPE_ETHERNET && 
-                strcmp(pAdapter->IpAddressList.IpAddress.String, "0.0.0.0") != 0) {
-                ostringstream mac_stream;
+            // Убираем условие проверки IP и ищем любой физический адаптер
+            if (pAdapter->AddressLength == 6 && 
+                (pAdapter->Type == MIB_IF_TYPE_ETHERNET || 
+                 pAdapter->Type == IF_TYPE_IEEE80211)) {  // Добавляем Wi-Fi
+                // Проверяем, что MAC не нулевой
+                bool hasValidMac = false;
                 for (UINT i = 0; i < pAdapter->AddressLength; i++) {
-                    mac_stream << hex << setfill('0') << setw(2)
-                               << static_cast<int>(pAdapter->Address[i]);
-                    if (i != pAdapter->AddressLength - 1) 
-                        mac_stream << ":";
+                    if (pAdapter->Address[i] != 0) {
+                        hasValidMac = true;
+                        break;
+                    }
                 }
-                mac = mac_stream.str();
-                break;
+                
+                if (hasValidMac) {
+                    ostringstream mac_stream;
+                    for (UINT i = 0; i < pAdapter->AddressLength; i++) {
+                        mac_stream << hex << setfill('0') << setw(2)
+                                   << static_cast<int>(pAdapter->Address[i]);
+                        if (i != pAdapter->AddressLength - 1) 
+                            mac_stream << ":";
+                    }
+                    mac = mac_stream.str();
+                    // Преобразуем в верхний регистр для читаемости
+                    transform(mac.begin(), mac.end(), mac.begin(), ::toupper);
+                    break;
+                }
             }
             pAdapter = pAdapter->Next;
         }
@@ -114,14 +129,28 @@ string getMacAddress() {
             struct sockaddr_dl* sdl = (struct sockaddr_dl*)ifa->ifa_addr;
             if (sdl->sdl_alen == 6) {
                 unsigned char* macPtr = (unsigned char*)LLADDR(sdl);
-                ostringstream mac_stream;
+                
+                // Проверяем, что MAC не нулевой
+                bool hasValidMac = false;
                 for (int i = 0; i < 6; i++) {
-                    mac_stream << hex << setfill('0') << setw(2)
-                               << static_cast<int>(macPtr[i]);
-                    if (i != 5) mac_stream << ":";
+                    if (macPtr[i] != 0) {
+                        hasValidMac = true;
+                        break;
+                    }
                 }
-                mac = mac_stream.str();
-                break;
+                
+                if (hasValidMac) {
+                    ostringstream mac_stream;
+                    for (int i = 0; i < 6; i++) {
+                        mac_stream << hex << setfill('0') << setw(2)
+                                   << static_cast<int>(macPtr[i]);
+                        if (i != 5) mac_stream << ":";
+                    }
+                    mac = mac_stream.str();
+                    // Преобразуем в верхний регистр
+                    transform(mac.begin(), mac.end(), mac.begin(), ::toupper);
+                    break;
+                }
             }
         }
     }
